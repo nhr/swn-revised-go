@@ -91,7 +91,7 @@ function getSector() {
             alert("Could not retrieve sector data from the server.");
         },
         complete: function() {
-            $("#s-overview").html('<p class="sector-name">Sector ' + SNAME + '<span style="font-size: 10px; font-style: italic;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Click stars to move / swap them]</span></p><img id="starchart" height="820" width="563" style="display: block; margin-left: auto; margin-right: auto;" src="Includes/swnmap.png" />');
+            $("#s-overview").html('<p class="sector-name">Sector ' + SNAME + '<span style="font-size: 10px; font-style: italic;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Click stars to move / swap them]</span></p><div id="map-wrapper" style="position: relative; width: 563px; margin: 0 auto;"><img id="starchart" height="820" width="563" src="Includes/swnmap.png" /></div>');
             $("#s-worlds").html(makeWorldsHTML());
             $("#s-npcs").html(makeNPCsHTML());
             $("#s-corps").html(makeCorpsHTML());
@@ -156,7 +156,7 @@ function makeNPCsHTML() {
         var n = SECTOR.npcs[i];
         rows.push([n.name, n.age, n.role, n.trait]);
     }
-    return make2ColHTML(rows);
+    return makeTable(rows);
 }
 
 function makeCorpsHTML() {
@@ -165,7 +165,7 @@ function makeCorpsHTML() {
         var c = SECTOR.corps[i];
         rows.push([c.name, c.business]);
     }
-    return make2ColHTML(rows);
+    return makeTable(rows);
 }
 
 function makeRelsHTML() {
@@ -175,7 +175,7 @@ function makeRelsHTML() {
         var l = r.leadership.split('.')[0];
         rows.push([r.name, l]);
     }
-    return make2ColHTML(rows);
+    return makeTable(rows);
 }
 
 function makePolsHTML() {
@@ -222,7 +222,7 @@ function makePatronsHTML() {
         var p = SECTOR.patrons[i];
         rows.push([p.name, p.trustworthiness, p.eagerness, p.challenge]);
     }
-    return make2ColHTML(rows);
+    return makeTable(rows);
 }
 
 function makeBeastsHTML() {
@@ -232,7 +232,7 @@ function makeBeastsHTML() {
         var b = SECTOR.beasts[i];
         rows.push([b.name, b.body_plan, b.size, b.behavior_type]);
     }
-    return make2ColHTML(rows);
+    return makeTable(rows);
 }
 
 function makeFactionsHTML() {
@@ -291,7 +291,7 @@ function make2ColHTML (myList) {
         rtCol[rtCol.length] = myList[i];
     }
 
-    var tTxt = '<table style="width: 100%;"><tr><td class="cols">';
+    var tTxt = '<table style="max-width: 680px; margin-left: auto; margin-right: auto;"><tr><td class="cols">';
     tTxt = tTxt + makeTable(ltCol);
     tTxt = tTxt + '</td><td class="cols">';
     tTxt = tTxt + makeTable(rtCol);
@@ -387,14 +387,14 @@ function makeClickMap() {
 }
 
 function drawStars() {
-    var oTxt = '<p class="sector-name">Sector ' + SNAME + '<span style="font-size: 10px; font-style: italic;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Click stars to move / swap them]</span></p><img id="starchart" height="820" width="563" style="display: block; margin-left: auto; margin-right: auto;" src="Includes/swnmap.png" />';
+    var oTxt = '<p class="sector-name">Sector ' + SNAME + '<span style="font-size: 10px; font-style: italic;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[Click stars to move / swap them]</span></p><div id="map-wrapper" style="position: relative; width: 563px; margin: 0 auto;"><img id="starchart" height="820" width="563" src="Includes/swnmap.png" />';
 
     var iOff = $("#starchart").position();
 
     var seenCells = [];
 
-    // With the latest versions of the popular browsers, these offsets appear to work universally.
-    var browserOffset = { left: 38.15, top: -2 };
+    // Star positions are relative to map-wrapper, which matches the starchart exactly.
+    var browserOffset = { left: 0, top: 0 };
 
     for (var s = 0; s < STARS.length; s++) {
         var star = STARS[s];
@@ -429,7 +429,7 @@ function drawStars() {
         }
     }
 
-    oTxt = oTxt + '<img style="position: absolute; left: ' + (iOff.left + browserOffset['left']) + 'px; top: ' + (iOff.top + browserOffset['top']) + 'px;" height="820" width="563" src="Includes/clear.gif"  usemap="#chartmap" />' + CLICKMAP;
+    oTxt = oTxt + '<img style="position: absolute; left: ' + (iOff.left + browserOffset['left']) + 'px; top: ' + (iOff.top + browserOffset['top']) + 'px;" height="820" width="563" src="Includes/clear.gif"  usemap="#chartmap" />' + CLICKMAP + '</div>';
 
     $("#s-overview").html(oTxt);
 }

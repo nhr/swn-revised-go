@@ -52,7 +52,7 @@ p.sector-name {
     margin-right: auto;
     margin-top: 100px;    
     padding: 5px;
-    width: 669px;
+    width: 1100px;
     overflow: hidden;
     text-align: center;
 }
@@ -69,7 +69,7 @@ p.sector-name {
     overflow: hidden;
 }
 #save {
-    width: 669px;
+    width: 1100px;
     margin-left: auto;
     margin-right: auto;
     background-color: #DDDDDD;
@@ -88,10 +88,13 @@ p.sector-name {
     margin-right: auto;
 }
 #sector-frame {
-    width: 680px;
-    height: 610px;
+    width: 1112px;
     margin-left: auto;
     margin-right: auto;
+}
+#sector .ui-tabs-panel {
+    max-height: 580px;
+    overflow-y: auto;
 }
 table.cols {
     width: 490px;
