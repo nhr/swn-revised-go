@@ -1,0 +1,14 @@
+# Binaries
+/migrate
+/swn-revised-go
+
+# PDF text exports (can be regenerated from source PDFs)
+swn-original.txt
+swn-revised.txt
+
+# SQLite WAL/SHM files
+*.sqlite-wal
+*.sqlite-shm
+
+# Database backup
+*.sqlite.bak
