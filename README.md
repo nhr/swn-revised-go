@@ -1,7 +1,7 @@
-# SWN Sector Generator (Go Edition)
-A pure Go rewrite of the original [SWN Sector Generator](https://github.com/nhr/swn), built for use with the [Stars Without Number](https://sine-nomine-publishing.myshopify.com/collections/stars-without-number) role-playing game by [Sine Nomine Publishing](https://sine-nomine-publishing.myshopify.com/).
+# SWN Sector Generator — Revised Edition (Go)
+A pure Go rewrite of the original [SWN Sector Generator](https://github.com/nhr/swn), updated for the [Stars Without Number: Revised Edition](https://sine-nomine-publishing.myshopify.com/collections/stars-without-number) role-playing game by [Sine Nomine Publishing](https://sine-nomine-publishing.myshopify.com/).
 
-The rules for generating sectors are entirely based on the Stars Without Number role-playing game. The original generator was created out of love for the game and appreciation for the insane level of detail that the author put into his tables for rolling up a random galactic sector. This Go edition is a complete rewrite of the original Perl/CGI application as a single, self-contained binary.
+The generation tables and rules are based on the Stars Without Number Revised Edition. The original generator was created out of love for the game and appreciation for the insane level of detail that the author put into his tables for rolling up a random galactic sector. This Go edition is a complete rewrite of the original Perl/CGI application as a single, self-contained binary, ported from the original ruleset to the Revised Edition.
 
 ## Getting Your Head Around This Code
 
@@ -27,11 +27,11 @@ The Go back end serves a REST API using Go's standard `net/http` package:
 ### Internal Packages
 The application is organized into several internal packages:
 
-- **generator** - Core sector generation logic: stars, worlds, NPCs, corporations, religions, political parties, and aliens
+- **generator** - Core sector generation logic: stars, worlds, NPCs, corporations, religions, political parties, aliens, points of interest, patrons, beasts, factions, and encounters
 - **render** - Map image rendering using Go's image libraries
 - **wiki** - TiddlyWiki file generation and export
 - **dice** - Dice rolling utilities
-- **names** - Name generation data and logic, including alien language files
+- **names** - Name generation data and logic, including alien language files and culture-specific name lists
 - **conflux** - Conflux generation for sector maps
 - **util** - Seed tokenization and general utilities
 - **handlers** - HTTP request handlers
@@ -79,4 +79,4 @@ Then open `http://localhost:8080` (or your custom port) in a browser.
 
 * Check out the `LICENSE` file for information on how this app is licensed.
 
-* Before making this tool publicly available, the original author contacted the game's creator and agreed to limit the tool's functionality to those rules described in the free version of Stars Without Number. Take care to avoid changing this tool in any way that may infringe the copyrights of Sine Nomine Publishing or any other RPG publishers.
+* Before making the original tool publicly available, the author contacted the game's creator and agreed to limit the tool's functionality to those rules described in the free version of Stars Without Number. The Revised Edition likewise has a free version. Take care to avoid changing this tool in any way that may infringe the copyrights of Sine Nomine Publishing or any other RPG publishers.
