@@ -134,6 +134,26 @@ func (h *Handlers) ExportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err == nil && len(body.Stars) > 0 {
 			sector.Stars = body.Stars
+
+			// Build StarID-to-Cell map from updated positions
+			starCells := make(map[int]string)
+			for _, s := range sector.Stars {
+				starCells[s.ID] = s.Cell
+			}
+
+			// Update POI cells to match moved stars
+			for _, poi := range sector.POIs {
+				if newCell, ok := starCells[poi.StarID]; ok {
+					poi.Cell = newCell
+				}
+			}
+
+			// Update World cells to match moved stars
+			for _, w := range sector.Worlds {
+				if newCell, ok := starCells[w.StarID]; ok {
+					w.Cell = newCell
+				}
+			}
 		}
 	}
 

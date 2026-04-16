@@ -196,6 +196,14 @@ func markupArticles(s *generator.Sector, starMap []*generator.Star, worlds []*ge
 	copy(sorted, worlds)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 
+	// Build POI lookup by StarID for system articles
+	poiByStarID := make(map[int][]*generator.PointOfInterest)
+	if s.POIs != nil {
+		for _, poi := range s.POIs {
+			poiByStarID[poi.StarID] = append(poiByStarID[poi.StarID], poi)
+		}
+	}
+
 	systems := make(map[string]*systemInfo)
 	atms := make(map[string]*tagInfo)
 	temps := make(map[string]*tagInfo)
@@ -210,7 +218,7 @@ func markupArticles(s *generator.Sector, starMap []*generator.Star, worlds []*ge
 		sysname := util.SysName(star.Name, star.Cell)
 
 		if _, ok := systems[sysname]; !ok {
-			systems[sysname] = &systemInfo{star: star.Name, cell: star.Cell, planets: make(map[int]string)}
+			systems[sysname] = &systemInfo{star: star.Name, cell: star.Cell, starID: star.ID, planets: make(map[int]string)}
 		}
 		systems[sysname].planets[w.SysPos] = w.Name
 
@@ -227,15 +235,15 @@ func markupArticles(s *generator.Sector, starMap []*generator.Star, worlds []*ge
 			p += "\n" + strings.Join([]string{
 				"|!@@color:#" + gmColor + ";Tags@@|@@color:#" + gmColor + ";" + w.Tags[0].Name + ", " + w.Tags[1].Name + "@@|",
 				"!!!@@color:#" + gmColor + ";Enemies@@",
-				"@@color:#" + gmColor + ";" + w.Tags[0].Enemies + "; " + w.Tags[1].Enemies + "@@",
+				"@@color:#" + gmColor + ";" + wikiEscape(w.Tags[0].Enemies) + "; " + wikiEscape(w.Tags[1].Enemies) + "@@",
 				"!!!@@color:#" + gmColor + ";Friends@@",
-				"@@color:#" + gmColor + ";" + w.Tags[0].Friends + "; " + w.Tags[1].Friends + "@@",
+				"@@color:#" + gmColor + ";" + wikiEscape(w.Tags[0].Friends) + "; " + wikiEscape(w.Tags[1].Friends) + "@@",
 				"!!!@@color:#" + gmColor + ";Complications@@",
-				"@@color:#" + gmColor + ";" + w.Tags[0].Complications + "; " + w.Tags[1].Complications + "@@",
+				"@@color:#" + gmColor + ";" + wikiEscape(w.Tags[0].Complications) + "; " + wikiEscape(w.Tags[1].Complications) + "@@",
 				"!!!@@color:#" + gmColor + ";Places@@",
-				"@@color:#" + gmColor + ";" + w.Tags[0].Places + "; " + w.Tags[1].Places + "@@",
+				"@@color:#" + gmColor + ";" + wikiEscape(w.Tags[0].Places) + "; " + wikiEscape(w.Tags[1].Places) + "@@",
 				"!!!@@color:#" + gmColor + ";Things@@",
-				"@@color:#" + gmColor + ";" + w.Tags[0].Things + "; " + w.Tags[1].Things + "@@",
+				"@@color:#" + gmColor + ";" + wikiEscape(w.Tags[0].Things) + "; " + wikiEscape(w.Tags[1].Things) + "@@",
 				"!!@@color:#" + gmColor + ";Capital and Government@@",
 				"!!@@color:#" + gmColor + ";Cultural Notes@@",
 				"!!@@color:#" + gmColor + ";Adventures Prepared@@",
@@ -306,6 +314,13 @@ func markupArticles(s *generator.Sector, starMap []*generator.Star, worlds []*ge
 			links = append(links, "[["+sys.planets[pk]+"|Planet:"+sys.planets[pk]+"]]")
 		}
 
+		// Add POI tags to system
+		if pois, ok := poiByStarID[sys.starID]; ok && !forPC {
+			for _, poi := range pois {
+				planetTags = append(planetTags, "POI:"+util.Tagify(poi.Name))
+			}
+		}
+
 		txt.WriteString(divOpen(skey, timeStamp, strings.Join(planetTags, " ")))
 		txt.WriteString("<pre>|!Nav Designation|''" + "GRID " + sys.cell + "''|\n")
 		tl := "!System Planet"
@@ -319,6 +334,17 @@ func markupArticles(s *generator.Sector, starMap []*generator.Star, worlds []*ge
 			}
 			txt.WriteString("|" + c1 + "|" + link + "|\n")
 		}
+		// Add POI rows if this system has any
+		if pois, ok := poiByStarID[sys.starID]; ok && !forPC && len(pois) > 0 {
+			for pi, poi := range pois {
+				poiTitle := "POI:" + util.Tagify(poi.Name)
+				c1 := "!Points of Interest"
+				if pi > 0 {
+					c1 = "~"
+				}
+				txt.WriteString("|" + c1 + "|@@color:#" + gmColor + ";[[" + poi.Name + "|" + poiTitle + "]]@@|\n")
+			}
+		}
 		txt.WriteString("</pre>\n</div>\n")
 	}
 
@@ -330,7 +356,7 @@ func markupArticles(s *generator.Sector, starMap []*generator.Star, worlds []*ge
 	for _, list := range tagLists {
 		for tag, info := range list {
 			txt.WriteString(divOpenNoTags(tag, timeStamp))
-			txt.WriteString("<pre>''" + info.name + "'' - " + info.desc + "\n</pre>\n")
+			txt.WriteString("<pre>''" + info.name + "'' - " + wikiEscape(info.desc) + "\n</pre>\n")
 			txt.WriteString("</div>\n")
 		}
 	}
@@ -749,23 +775,22 @@ func writePOIArticles(txt *strings.Builder, s *generator.Sector, starMap []*gene
 	txt.WriteString(divOpenNoTags("Points of Interest", ts))
 	txt.WriteString("<pre>\n|!Name|!Type|!Location|h\n")
 	for _, poi := range s.POIs {
-		starName := ""
-		if poi.StarID < len(starMap) {
-			starName = starMap[poi.StarID].Name
-		}
+		star := starMap[poi.StarID]
+		sysname := util.SysName(star.Name, star.Cell)
 		title := "POI:" + util.Tagify(poi.Name)
-		txt.WriteString("|[[" + poi.Name + "|" + title + "]]|" + poi.Type + "|" + starName + " (" + poi.Cell + ")|\n")
+		location := "[[" + star.Name + "|" + sysname + "]]"
+		txt.WriteString("|[[" + poi.Name + "|" + title + "]]|" + poi.Type + "|" + location + "|\n")
 	}
 	txt.WriteString("</pre>\n</div>\n")
 
 	for _, poi := range s.POIs {
-		starName := ""
-		if poi.StarID < len(starMap) {
-			starName = starMap[poi.StarID].Name
-		}
+		star := starMap[poi.StarID]
+		sysname := util.SysName(star.Name, star.Cell)
 		title := "POI:" + util.Tagify(poi.Name)
-		art := divOpenNoTags(title, ts) +
-			"<pre>\n|!Name      |" + poi.Name + "|\n|!Type      |" + poi.Type + "|\n|!Location  |" + starName + " (" + poi.Cell + ")|\n|!Occupied By|" + poi.OccupiedBy + "|\n|!Situation |" + poi.Situation + "|\n!!!Notes\n</pre>\n</div>"
+		location := "[[" + star.Name + "|" + sysname + "]]"
+		poiTags := title + " " + sysname
+		art := divOpen(title, ts, poiTags) +
+			"<pre>\n|!Name      |" + poi.Name + "|\n|!Type      |" + poi.Type + "|\n|!Location  |" + location + "|\n|!Occupied By|" + poi.OccupiedBy + "|\n|!Situation |" + poi.Situation + "|\n!!!Notes\n</pre>\n</div>"
 		txt.WriteString(art + "\n")
 	}
 }
@@ -775,14 +800,14 @@ func writePatronArticles(txt *strings.Builder, s *generator.Sector, ts string) {
 	txt.WriteString("<pre>\n|!Name|!Trustworthiness|!Eagerness|h\n")
 	for _, p := range s.Patrons {
 		title := "Patron:" + util.Tagify(p.Name)
-		txt.WriteString("|[[" + p.Name + "|" + title + "]]|" + p.Trustworthiness + "|" + p.Eagerness + "|\n")
+		txt.WriteString("|[[" + p.Name + "|" + title + "]]|" + wikiEscape(p.Trustworthiness) + "|" + wikiEscape(p.Eagerness) + "|\n")
 	}
 	txt.WriteString("</pre>\n</div>\n")
 
 	for _, p := range s.Patrons {
 		title := "Patron:" + util.Tagify(p.Name)
-		art := divOpenNoTags(title, ts) +
-			"<pre>\n|!Name           |" + p.Name + "|\n|!Trustworthiness|" + p.Trustworthiness + "|\n|!Eagerness      |" + p.Eagerness + "|\n|!Reward         |" + p.Reward + "|\n|!Challenge      |" + p.Challenge + "|\n|!Opposition     |" + p.Opposition + "|\n|!Complication   |" + p.Complication + "|\n!!!Notes\n</pre>\n</div>"
+		art := divOpen(title, ts, title) +
+			"<pre>\n|!Name           |" + p.Name + "|\n|!Trustworthiness|" + wikiEscape(p.Trustworthiness) + "|\n|!Eagerness      |" + wikiEscape(p.Eagerness) + "|\n|!Reward         |" + wikiEscape(p.Reward) + "|\n|!Challenge      |" + wikiEscape(p.Challenge) + "|\n|!Opposition     |" + wikiEscape(p.Opposition) + "|\n|!Complication   |" + wikiEscape(p.Complication) + "|\n!!!Notes\n</pre>\n</div>"
 		txt.WriteString(art + "\n")
 	}
 }
@@ -799,7 +824,7 @@ func writeBeastArticles(txt *strings.Builder, s *generator.Sector, ts string) {
 	for _, b := range s.Beasts {
 		title := "Beast:" + util.Tagify(b.Name)
 		features := strings.Join(b.Features, ", ")
-		art := divOpenNoTags(title, ts) +
+		art := divOpen(title, ts, title) +
 			"<pre>\n|!Name     |" + b.Name + "|\n|!Features |" + features + "|\n|!Body Plan|" + b.BodyPlan + "|\n|!Limbs    |" + b.LimbMod + "|\n|!Skin     |" + b.SkinMod + "|\n|!Weapon   |" + b.Weapon + "|\n|!Size     |" + b.Size + "|\n|!Behavior |" + b.BehavType + ": " + b.Behavior + "|\n"
 		if b.Discharge != "" {
 			art += "|!Discharge|" + b.Discharge + "|\n"
@@ -827,8 +852,8 @@ func writeFactionArticles(txt *strings.Builder, s *generator.Sector, ts string) 
 		for _, t := range f.Tags {
 			tagNames = append(tagNames, t.Name)
 		}
-		art := divOpenNoTags(title, ts) +
-			fmt.Sprintf("<pre>\n|!Name    |%s|\n|!Tags    |%s|\n|!Force   |%d|\n|!Cunning |%d|\n|!Wealth  |%d|\n|!HP      |%d / %d|\n|!FacCreds|%d|\n|!Goal    |%s|\n!!!Notes\n</pre>\n</div>",
+		art := divOpen(title, ts, title) +
+			fmt.Sprintf("<pre>\n|!Name    |%s|\n|!Tags    |%s|\n|!Force   |%d|\n|!Cunning |%d|\n|!Wealth  |%d|\n|!HP      |%d / %d|\n|!~FacCreds|%d|\n|!Goal    |%s|\n!!!Notes\n</pre>\n</div>",
 				f.Name, strings.Join(tagNames, ", "), f.Force, f.Cunning, f.Wealth, f.HP, f.MaxHP, f.FacCreds, f.Goal)
 		txt.WriteString(art + "\n")
 	}
@@ -836,18 +861,18 @@ func writeFactionArticles(txt *strings.Builder, s *generator.Sector, ts string) 
 
 func writeUrbanEncounterArticles(txt *strings.Builder, s *generator.Sector, ts string) {
 	txt.WriteString(divOpenNoTags("Urban Encounters", ts))
-	txt.WriteString("<pre>\n|!Conflict|!Antagonist|!Venue|!PC Involvement|!Event|!Feature|h\n")
-	for _, e := range s.UrbanEnc {
-		txt.WriteString("|" + e.Conflict + "|" + e.Antagonist + "|" + e.Venue + "|" + e.PCInvolve + "|" + e.Event + "|" + e.Feature + "|\n")
+	txt.WriteString("<pre>\n|!d20|!Conflict|!Antagonist|!Venue|!PC Involvement|!Event|!Feature|h\n")
+	for i, e := range s.UrbanEnc {
+		txt.WriteString(fmt.Sprintf("|%d|%s|%s|%s|%s|%s|%s|\n", i+1, wikiEscape(e.Conflict), wikiEscape(e.Antagonist), wikiEscape(e.Venue), wikiEscape(e.PCInvolve), wikiEscape(e.Event), wikiEscape(e.Feature)))
 	}
 	txt.WriteString("</pre>\n</div>\n")
 }
 
 func writeWildEncounterArticles(txt *strings.Builder, s *generator.Sector, ts string) {
 	txt.WriteString(divOpenNoTags("Wilderness Encounters", ts))
-	txt.WriteString("<pre>\n|!Range|!Hostile|!Weather|!Nature|!Friendly|!Feature|h\n")
-	for _, e := range s.WildEnc {
-		txt.WriteString("|" + e.Range + "|" + e.Hostile + "|" + e.Weather + "|" + e.Nature + "|" + e.Friendly + "|" + e.Feature + "|\n")
+	txt.WriteString("<pre>\n|!d20|!Range|!Hostile|!Weather|!Nature|!Friendly|!Feature|h\n")
+	for i, e := range s.WildEnc {
+		txt.WriteString(fmt.Sprintf("|%d|%s|%s|%s|%s|%s|%s|\n", i+1, wikiEscape(e.Range), wikiEscape(e.Hostile), wikiEscape(e.Weather), wikiEscape(e.Nature), wikiEscape(e.Friendly), wikiEscape(e.Feature)))
 	}
 	txt.WriteString("</pre>\n</div>\n")
 }
@@ -891,6 +916,7 @@ As an aside, this article is also not included in the PC version of the file. Ha
 type systemInfo struct {
 	star    string
 	cell    string
+	starID  int
 	planets map[int]string
 }
 
@@ -905,6 +931,16 @@ func divOpen(title, ts, tags string) string {
 
 func divOpenNoTags(title, ts string) string {
 	return `<div title="` + title + `" creator="SWN Sector Generator" modifier="SWN Sector Generator" created="` + ts + `" changecount="1">` + "\n"
+}
+
+// wikiEscape prefixes ~ to CamelCase words that TiddlyWiki would auto-link.
+func wikiEscape(s string) string {
+	s = strings.ReplaceAll(s, "PCs", "~PCs")
+	s = strings.ReplaceAll(s, "FacCreds", "~FacCreds")
+	// Fix if already escaped
+	s = strings.ReplaceAll(s, "~~PCs", "~PCs")
+	s = strings.ReplaceAll(s, "~~FacCreds", "~FacCreds")
+	return s
 }
 
 func sortedKeys(m map[string]*systemInfo) []string {

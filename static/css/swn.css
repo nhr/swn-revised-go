@@ -93,7 +93,7 @@ p.sector-name {
     margin-right: auto;
 }
 #sector .ui-tabs-panel {
-    max-height: 580px;
+    max-height: 860px;
     overflow-y: auto;
 }
 table.cols {
