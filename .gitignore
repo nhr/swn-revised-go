@@ -1,6 +1,7 @@
 # Binaries
 /migrate
 /swn-revised-go
+/swn-go
 
 # PDF text exports (can be regenerated from source PDFs)
 swn-original.txt
